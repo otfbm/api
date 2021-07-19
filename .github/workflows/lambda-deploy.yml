@@ -1,0 +1,35 @@
+name: deploy to lambda
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy_source:
+    name: deploy to lambda
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Use Node.js 14.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      - name: npm install
+        run: |
+          npm ci
+          npm prune --production
+        env:
+          CI: true
+      - name: zip
+        uses: montudor/action-zip@v0.1.0
+        with:
+          args: zip -r ./app.zip index.js handlers.js node_modules
+      - name: default deploy
+        uses: appleboy/lambda-action@master
+        with:
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: us-west-2
+          s3_bucket: otfbm-api-deploy
+          function_name: otfbm-api
+          zip_file: app.zip
